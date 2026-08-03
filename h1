@@ -1,0 +1,53 @@
+To see what everyone else misses using Retire.js (or similar JavaScript dependency scanners), you have to look past the initial scan report.
+Most bug bounty hunters run Retire.js out of the box, see zero high-severity CVEs listed for the parent domain, and immediately move on. Scripts and average researchers fail because they only look for known, pre-packaged public exploits targeting the main website.
+To uncover hidden vulnerabilities, you must use Retire.js to analyze context boundaries, regional CDNs, and third-party integrations.
+------------------------------
+## 🔍 1. Scan the Hidden "Context Switches" (Mobile & Mirrors)
+1win actively maintains multiple alternative domains (1w.run, 1w.cash) and dedicated mobile layouts to bypass regional blocks. Standard extensions only scan the current tab you are looking at.
+
+* The Trick: Don't just scan the main desktop landing page. Use the Retire.js command-line interface (CLI) to crawl localized mirror directories or crawl targets while spoofing mobile user-agents.
+* The Technique:
+1. Extract all static assets specifically from alternative endpoints like https://1w.run or subdomains discovered during your recon.
+   2. Download the JavaScript bundles locally using wget or curl.
+   3. Run the Retire CLI directly on the folder structure:
+   
+   retire --path ./downloaded_js_files/
+   
+   * What is hidden: Main domains are heavily updated. Mirror domains often run older, cached versions of client-side routing libraries or outdated state-management scripts that contain prototype pollution vulnerabilities.
+
+------------------------------
+## 🎮 2. Target the Casino Game Handshake Files
+The 1win platform hosts games from dozens of external providers. When you open a slot or live game, it injects external JavaScript frameworks into the browser context. Automated scanners ignore these because they require an active, funded user session to trigger.
+
+* The Trick: Use the Retire.js integration inside your proxy (like Burp Suite) to inspect traffic while playing or opening a game window.
+* The Technique:
+1. Open a game stream.
+   2. Monitor the custom vendor assets loaded inside frames or WebSockets.
+   3. Look at the libraries used by the third-party game frame to pass messages back to the parent window (window.parent.postMessage).
+* What is hidden: If Retire.js flags an outdated DOM-purifying or object-merging library inside a game provider's bundle, you can exploit it. A vulnerability there can allow you to hijack the messaging stream, potentially forcing fake "win" states or extracting session tokens across origins.
+
+------------------------------
+## 🧬 3. Hunt for Zero-CVE "Ghost Dependencies"
+Retire.js matches exact version strings against a database of known vulnerabilities (CVEs). If a developer custom-modified an old library or bundled multiple scripts into a single file, standard automated scanners miss it entirely.
+
+* The Trick: Look for "signatures" of outdated libraries inside custom packed code, even if Retire.js gives a clean report.
+* The Technique:
+1. Look at the lines of code flagged as "unknown" or custom-built by Retire.js.
+   2. Inspect the global object prototypes defined in the window context (e.g., checking if Object.prototype can be altered via custom query parameters).
+   3. Manually test for Client-Side Prototype Pollution by feeding inputs like ?__proto__[vulnerableProperty]=test into the scripts handled by these custom engines.
+* What is hidden: If you can pollute the base JavaScript object framework through an unvetted library configuration, you can often overwrite application settings to achieve stored Client-Side XSS or bypass internal routing checks.
+
+------------------------------
+## 🛠️ 4. Cross-Reference Retire.js Findings with the Scope Rules
+According to the reward policy you shared, standard XSS without script execution or blocked by CSP yields no bounty. If Retire.js flags a vulnerability:
+
+* Do not report the version number alone: That will result in an immediate "Informative" close.
+* Weaponize the finding: Prove that the outdated library allows you to successfully bypass the site's explicit defenses (like CSP parameters) or directly influences sensitive account endpoints (like registration or settings modifications).
+
+------------------------------
+## 🚀 Next Steps to Proceed
+To tailor this process for your workstation:
+
+* Are you running Retire.js as a Burp Suite extension, a browser extension, or via the command line (CLI)?
+* Would you like assistance setting up a bash script wrapper to automatically download and scan all JavaScript assets from the mirror domains?
+

@@ -1,0 +1,198 @@
+## 🛡️ Tier 1: Routing & Proxy Architecture (The Host & Perimeter Failures)## 1. The Multi-Tenant Mirror Host Poisoning
+
+* The Assumption: "We generate the absolute password reset URL securely on our servers using hardcoded local domain arrays. The final link will always lead users back to our official domain space."
+* The Hidden Flaw: To ensure flexibility across hundreds of global domain mirrors (1w.run, 1w.cash, etc.), the backend application extracts and processes the incoming HTTP Host header dynamically to assemble the email anchor link string.
+* How to Break It: Submit a reset request for a target account. Intercept the outbound transmission using your proxy tool. Supply an unvetted destination domain inside the Host configuration line or inject an override string inside headers like X-Forwarded-Host or X-Original-URL. If the platform relies on the untrusted header to construct the email formatting, the victim receives a legitimate corporate email containing a link that forwards their secure verification key directly to your external logging collection node.
+
+## 2. Path Traversal Context Splitting (Gateway vs. Core API)
+
+* The Assumption: "The API routing gateway blocks all access to administrative user-management controllers. Unauthenticated clients can only touch the public recovery endpoint path."
+* The Hidden Flaw: The front-end perimeter proxy and the back-end application server use distinct, asymmetric string parsing engines to interpret relative directory navigation commands.
+* How to Break It: Submit a request using dot-semicolon formatting or mixed case configurations: POST /api/v1/auth/forgot-password/..;/..;/admin/modify-user. The edge firewall reads the structure as a safe, public path mapping and allows it to pass. The underlying API backend resolves the directory characters, dropping the execution directly inside an un-rate-limited administrative profile control block.
+
+## 3. Client IP Forwarding Overhead Bypass
+
+* The Assumption: "We enforce strict global IP-based rate limits on the password recovery endpoint to prevent malicious bulk account enumeration or credential scanning."
+* The Hidden Flaw: The software architecture uses standard proxy routing logs (like the X-Forwarded-For string sequence) to map and track user IP contexts for connection throttling limits.
+* How to Break It: Automate a multi-account reset loop but continuously fluctuate tracking tracking properties on each sequential transmission:
+
+X-Forwarded-For: 127.0.0.1
+X-Real-IP: 10.0.0.1
+True-Client-IP: 192.168.1.1
+
+If the application's rate-limiting script trustfully evaluates these incoming values to determine request origin, it resets the connection penalty threshold tracker on every packet.
+
+## 4. The Geolocation Mirror Divergence
+
+* The Assumption: "The input-validation frameworks guarding password modifications are identically mirrored across all our server locations worldwide."
+* The Hidden Flaw: Regional edge deployment mirrors or staging boxes handle authentication routing logic using legacy configurations or older, unpatched service packages.
+* How to Break It: Route your proxy traffic networks sequentially through less regulated geographic nodes specified inside your scope document (e.g., specific regional mirrors in South Asia or West Africa). Submit normal validation payloads to watch for structural differences in error feedback, length restrictions, or missing CAPTCHA requirements that are strictly enforced on primary Western landing points.
+
+------------------------------
+## 💵 Tier 2: Microservice State Machines (The Decoupled Logical Steps)## 5. Decoupled Identity-Token Reassignment
+
+* The Assumption: "The generated reset token functions as a cryptographic master key. Validating the key naturally confirms the identity of the account requesting the operation."
+* The Hidden Flaw: The authentication logic uses separate endpoint handlers to check the token value and to perform the final password overwrite update query, trusting the user-supplied parameter text for identity routing.
+* How to Break It: Trigger a legal reset link request for an account you own to acquire a valid token string (TOKEN_A). Intercept the final password execution packet (POST /api/v1/auth/confirm-reset) and submit your valid key alongside the victim's user identifier or email string:
+
+{
+  "token": "TOKEN_A",
+  "email": "victim_user@example.com",
+  "password": "NewPassword123!"
+}
+
+If the code checks that TOKEN_A is valid and active in the database but executes the password rewrite using the separate, client-provided email string, the victim's login credentials are overwritten.
+
+## 6. Multi-Account Parameter Pollution
+
+* The Assumption: "Our processing routines map individual data parameters strictly to a singular model object structure, blocking multiple identity submissions."
+* The Hidden Flaw: The validation component parses incoming structures array-style, but the underlying email dispatcher layer reads values using top-down or bottom-up index selections.
+* How to Break It: Submit a reset request body that supplies duplicate keys or pushes parameters inside an unexpected list format:
+
+{
+  "email": "victim@example.com",
+  "email": "attacker@example.com"
+}
+
+If the data-validation engine checks the first instance to confirm an account exists but the background email utility processes the secondary variable, the victim's secure recovery link lands directly in your attacker inbox.
+
+## 7. Session Context Migration Failure
+
+* The Assumption: "When an account completes a password modification, all historic access permissions, active sessions, and verification cookie states are terminated instantly."
+* The Hidden Flaw: The token revocation function clears data rows inside the primary SQL user session block but fails to clear data saved inside regional CDN caches or persistent WebSocket stream configurations.
+* How to Break It: Establish an active WebSocket gaming or profile sync connection on a device. On an entirely different machine, execute a complete password reset recovery sequence. If the background stream continues to stream or execute transactions without forcing a re-authentication handshake, you have identified a session persistence flaw.
+
+## 8. Pre-Verified Step Injection
+
+* The Assumption: "A user can only reach the final password change pipeline if they successfully complete Step 1 (Request) and Step 2 (Token Validation) sequentially."
+* The Hidden Flaw: The system tracks step validation status using temporary client cookies or session properties (like step_2_verified = true) that lack cryptographic signatures.
+* How to Break It: Navigate directly to the final layout path (/auth/reset-final) and submit a new password payload while manually appending unverified success markers inside your cookie arrays or header tracking attributes. If the endpoint processes the modification by evaluating the step state flag instead of verifying the core token row, it overrides the security restriction.
+
+------------------------------
+## 🧬 Tier 3: Data Layer Processing & Serialization## 9. JSON Null State Collision (The Empty Master Token)
+
+* The Assumption: "If an incoming verification payload contains random, invalid data strings or empty inputs, the comparison query will fail and reject the request."
+* The Hidden Flaw: Database tables initialize token slots for standard accounts as an unassigned NULL value. Loose type comparison routines evaluate null properties unexpectedly.
+* How to Break It: Submit a password execution payload where the token string parameter is explicitly replaced with an actual data primitive null or a boolean value:
+
+{
+  "token": null,
+  "email": "victim@example.com",
+  "password": "HackedPassword123!"
+}
+
+If the backend verification code evaluates the incoming object using an un-vetted equation line (like if (input.token == database.token)), the expression evaluates NULL == NULL as True, running the password override without requiring a generated link.
+
+## 10. Type Juggling Array Type Confusion
+
+* The Assumption: "Our code confirms that the string input matches the token record exactly before executing a modification."
+* The Hidden Flaw: Languages like PHP or Node.js processing un-sanitized JSON arrays can alter the execution behavior of comparative statements.
+* How to Break It: Modify the token parameter value into an array containing an arbitrary string chunk or a boolean flag:
+
+{
+  "token": [true, "arbitrary_data"],
+  "email": "victim@example.com"
+}
+
+If a loose structural check evaluates the array based on the presence of a true condition matching the expected database entry, the authentication logic grants full execution access.
+
+## 11. NoSQL Object Operation Injection
+
+* The Assumption: "Input filters strip out standard characters like quotes and dashes, making it impossible to perform syntax injection queries."
+* The Hidden Flaw: The application backend relies on a NoSQL document database (like MongoDB). The sanitization tools check for SQL characters but ignore structured object keys.
+* How to Break It: Inject structural comparison operations directly into the parameter keys:
+
+{
+  "token": {"$ne": "123"},
+  "email": "victim@example.com"
+}
+
+The data layer translates the query command to find a token that is "Not Equal" to 123. Since the victim's real secret token is not 123, the database locates the record match, validates the authorization state, and changes the password.
+
+## 12. Mass Assignment Context Overwrites
+
+* The Assumption: "The user recovery form only updates the password tracking block inside the data schema."
+* The Hidden Flaw: The background framework utilizes automated object mapping tools (Object-Relational Mapping / ORM) to write properties directly to user data rows.
+* How to Break It: When submitting the password override request, inject unexpected administrative parameters into the JSON block:
+
+{
+  "token": "VALID_TOKEN",
+  "password": "NewPassword123!",
+  "role": "administrator",
+  "is_verified": true,
+  "security_override": 1
+}
+
+If the code saves data using an open update routine (like User.update(req.body)), the application updates your password and elevates your account permissions simultaneously.
+
+------------------------------
+## 🔄 Tier 4: Communication & Token Lifecycles## 13. Token Reuse via Asynchronous Expiration Delay
+
+* The Assumption: "Once a password recovery token is used to change a password, it is deleted instantly and can never be deployed a second time."
+* The Hidden Flaw: The token invalidation step is handled as an asynchronous background task to maximize website speed, leaving a small processing delay window.
+* How to Break It: Intercept a valid confirmation packet containing your token. Replay that identical request 20 times within a single, high-speed HTTP/2 single-packet attack frame. If the requests hit the server threads simultaneously before the first background database write-lock deletes the token row, multiple parallel password updates will process successfully.
+
+## 14. Static Cryptographic Token Seed Leakage
+
+* The Assumption: "Our secret reset keys are generated using cryptographically secure random number generation protocols, making them impossible to guess."
+* The Hidden Flaw: The random generation library relies on a predictable data seed, such as combining the user's account registration timestamp with their numeric user ID.
+* How to Break It: Register a series of test accounts sequentially to capture the output tokens. Use your extraction pipeline to analyze the characters. If you can deduce the mathematical formula or timing seed used to generate the values, you can accurately calculate the token string for an alternate target account without receiving the email.
+
+## 15. The "Forgot Password" Email Tracking IDOR
+
+* The Assumption: "Triggering a password reset only initiates an automated email delivery stream to the target account address."
+* The Hidden Flaw: The API response payload returned to the client browser after requesting a reset contains internal database tracking variables or mailer queue reference keys.
+* How to Break It: Analyze the JSON response after requesting a reset:
+
+{
+  "status": "success",
+  "mail_queue_id": "MQ-9831A",
+  "delivery_hash": "abc123xyz"
+}
+
+If you take the mail_queue_id or delivery_hash and pass it to a secondary, unauthenticated tracking endpoint (like /api/v1/mail/status?id=MQ-9831A), the system might leak the full unredacted contents of the outbound email message, exposing the secure token string directly in your browser.
+
+## 16. Loose Token Comparison Truncation
+
+* The Assumption: "The system validates the entire 64-character token string before verifying an account modification."
+* The Hidden Flaw: The validation algorithm utilizes unsafe string-handling methods or functions that truncate comparisons if special string patterns are encountered.
+* How to Break It: Append trailing null space bytes, newline variables, or encoding indicators to your token value string (TOKEN_VALUE%00abc). If the string comparison logic parses up to the null byte indicator and cuts off the verification query, while the database locates the record based on the matching prefix layout, you can bypass exact validation requirements.
+
+------------------------------
+## 🎮 Tier 5: Ecosystem & Secondary Integration Defenses## 17. Multi-Device Password Synchronization Lock Bypass
+
+* The Assumption: "When a password changes, the core authentication microservice forces all interconnected third-party platforms and game rooms to disconnect instantly."
+* The Hidden Flaw: Third-party integrated game environments or casino apps cache authorization states independently to ensure stable gameplay during network drops.
+* How to Break It: Open an active, high-stakes game session inside a dedicated browser view. In an alternate window, execute a full account password reset recovery. If the casino gameplay matrix continues to allow wagers and fund transfers using the old session context after the core password change, you can exploit this desynchronization state.
+
+## 18. SMS OTP Verification Fallback Truncation
+
+* The Assumption: "If a user selects mobile SMS OTP verification for password recovery, they must supply the precise 6-digit numeric combination generated by our server."
+* The Hidden Flaw: The verification algorithm cast types numerical strings loosely, allowing integer truncation errors to compromise the validation block.
+* How to Break It: Submit a short numeric string or a floating-point variant format inside the verification field (e.g., passing 0 or 1e1 or an empty string ""). If the backend logic processes the verification check using a loose code block that evaluates an uninitialized variable check as matching an input state of zero or null, the system authorizes the password modification.
+
+## 19. Open API Mobile Client Context Abuse
+
+* The Assumption: "Our desktop site and mobile apps enforce identical security architectures to validate password recovery tokens."
+* The Hidden Flaw: The mobile app interacts with an older endpoint pathway (/api/v2/mobile/reset) that omits secondary anti-automation defenses like mandatory CAPTCHA, email rate-limiting blocks, or sophisticated parameter signature verification.
+* How to Break It: Modify your browser's user-agent to mirror an outdated iOS or Android application build profile, or interface directly with the mobile API routing controllers. This bypasses the front-end web security layers, allowing you to execute automated brute-force attempts directly against the token parameters.
+
+## 20. Stored XSS via Mailer Template Injection
+
+* The Assumption: "The user input supplied during a password recovery request is completely safe because it is never displayed back on any public web application layout."
+* The Hidden Flaw: The unescaped parameter data string is sent directly to an administrative mail tracking portal or an internal security review dashboard.
+* How to Break It: Inject obfuscated, non-standard JavaScript event tags inside the registration name or tracking parameters during your request. The public web application handles the text safely, but when an administrative operator logs into their specialized internal ticketing database or CRM console to investigate a stuck email transaction, your stored script executes directly within their privileged session context.
+
+------------------------------
+## 🚀 Operational Action Plan
+To systematically target these hidden reset endpoint assumptions on your workstation:
+
+* Isolate Parameter Structures: Systematically manipulate variable formats (arrays, booleans, null states) inside your proxy repeater tool to analyze how the validation engine shifts.
+* Map Identity Contexts: Always execute your test cycles using two separate test accounts to track whether properties belonging to Account A can be used to overwrite configurations on Account B.
+* Verify Compliance Boundaries: Ensure all your investigations stay strictly within the rules of engagement of the bug bounty program, utilizing only your authorized test identities to establish your findings.
+
+To ensure your environment is fully primed to capture these flaws, let me know:
+
+* Would you like a custom template script to automate testing for NoSQL Parameter Injection (Assumption 11)?
+* Or do you want to build a Burp Suite macro tracking routine to preserve active authentication contexts during multi-threaded race condition tests?
+

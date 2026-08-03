@@ -1,0 +1,62 @@
+Another brilliant example of an architectural assumption that appears perfectly secure to scanners and standard researchers is trusting the validation state of custom JSON sub-objects.
+This is often called Nested Object Blindness, and it frequently appears in microservice environments where a main gateway passes data down to internal billing or account microservices.
+------------------------------
+## The Setup: The "Secure" Architecture
+Imagine a profile settings update or a withdrawal configuration page. To protect against unauthorized changes, the developers use a strict, modern Object-Relational Mapping (ORM) framework.
+When you update your account details, your browser sends a clean JSON payload:
+
+{
+  "user_id": 98451,
+  "profile_data": {
+    "first_name": "John",
+    "last_name": "Doe",
+    "phone": "+123456789"
+  }
+}
+
+The application processes this through a strict security gateway:
+
+   1. The edge API gateway reads the top-level keys (user_id and profile_data).
+   2. It verifies that your active session token matches user_id: 98451.
+   3. It sanitizes the strings inside profile_data to block SQL injection and Cross-Site Scripting (XSS).
+
+## Why Everyone Thinks It Is Secure:
+
+* The Developer's Assumption: "We strictly validate that the user can only modify their own profile ID. The input properties are strictly checked against our profile text filters. Therefore, a user can never alter administrative flags or modify fields outside their permission boundaries."
+* What Scanners/Average Researchers Do: They try to change user_id to another number (which triggers a secure 403 Unauthorized block from the gateway). They inject basic XSS payloads into first_name, which get cleanly stripped or escaped. They assume the endpoint is locked down and move on.
+
+------------------------------
+## The Reality: Finding the Hidden Flaw
+The developer assumed that because the gateway validated the top-level structure, the internal backend model parser would only look at the expected keys.
+To break this assumption, look for Mass Assignment via Nested Injection. When the data is passed from the secure gateway to the internal user database model, the backend database layer often runs an automated "save" or "update" function that updates every key it finds in the object, even if it wasn't supposed to be there.
+## The Execution: Overwriting the State Machine
+Instead of changing the restricted user_id fields at the top layer, you inject hidden, internal data parameters directly inside the sub-object structure that the developer forgot to explicitly protect with a strict whitelist.
+You modify your request proxy payload to look like this:
+
+{
+  "user_id": 98451,
+  "profile_data": {
+    "first_name": "John",
+    "last_name": "Doe",
+    "phone": "+123456789",
+    "is_admin": true,
+    "kyc_status": "VERIFIED",
+    "vip_tier": 5,
+    "balance_bonus": 5000.00
+  }
+}
+
+## Why it breaks the system:
+
+   1. The Gateway Check: The gateway looks at the request. It confirms your session owns user_id: 98451. It checks the strings and sees no malicious script tags. It allows the packet to pass.
+   2. The Internal Handoff: The gateway forwards the profile_data block directly to the internal user database microservice.
+   3. The Database Save: The backend code uses an automated function like User.update(req.body.profile_data). Because the developer did not explicitly whitelist only first_name, last_name, and phone at the database level, the application blindly maps the injected keys (is_admin, kyc_status, etc.) directly onto your database row.
+
+Without triggering a single firewall alarm or input validation error, you have rewritten your account's authorization tier inside the core database.
+------------------------------
+## 🚀 Advancing Your Hunt
+This vulnerability highlights how security boundaries break when data moves between different layers of software architecture.
+
+* Would you like to review a Python dictionary-fuzzing script template designed to automatically hunt for these hidden nested administrative parameters?
+* Or would you prefer to look into how developers make flawed assumptions regarding temporary session states during multi-device login syncs?
+

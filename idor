@@ -1,0 +1,15 @@
+🛡️ Web App Vulnerabilities (Bypasses & Infrastructure Splitting)Standard IDOR testing is limited to guessing sequential user identifiers like changing id=1001 to id=1002. This approach is ineffective against production applications that employ Web Application Firewalls (WAF) and modern authentication mechanisms.                   [ Attacker Request ]
+          (GET /api/v1/private/profile HTTP/1.1)
+           (X-Original-URL: /api/v1/admin/logs)
+                            │
+                            ▼
+               [ Reverse Proxy / WAF ]
+         (Permits request: path is /private)
+                            │
+                            ▼
+              [ Internal Backend Server ]
+       (Rewrites request path to /admin/logs)
+                            │
+                            ▼
+                [ Target Admin Data Leaked ]
+Reverse Proxy Routing Flaws (WAF/Gateway Asymmetry)Enterprise web infrastructures route traffic through a hierarchy of edge proxies (Cloudflare, Nginx, Envox) before reaching internal API components. If these servers interpret path routing differently, security policies can be circumvented.Where It Is Hidden: Access routines guarding administrative or support-only backends (/admin, /internal).The Technique: Use HTTP parameter and path pollution overrides to convince the edge gateway that the query is safe, while forcing the underlying target service to execute an alternate path.Payloads:GET /api/v1/user/settings/..;/..;/admin/system HTTP/1.1GET /api/v1/user/settings HTTP/1.1\nX-Original-URL: /api/v1/admin/channelsGET /api/v1/user/settings HTTP/1.1\nX-Forwarded-For: 127.0.0.1Second-Order IDOR via Session Context PollutionDirect IDOR bugs are rare on standard requests. Second-order IDORs happen when data values are read from databases safely but are later applied to a secondary workflow without checking the original ownership context.Where It Is Hidden: Features involving asynchronous updates, such as batch downloads of transaction logs or multi-device account synchronization options.The Technique: Register two accounts. On Account A, initiate an export or bulk transaction log generation request. Intercept the processing payload, substituting your account ID with Account B's reference tag inside temporary data stores or parameters. Check if the resulting file contains data belonging to the targeted account.Payloads:{"export_config": {"user_id": TARGET_ID, "format": "csv", "filters": []}}{"batch_queue": [TARGET_ID, YOUR_ID]}

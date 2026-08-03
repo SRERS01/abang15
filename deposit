@@ -1,0 +1,147 @@
+## 🛡️ Tier 1: Asynchronous & Concurrency Control (The State Race Conditions)## 1. The Pre-Approved Crediting Replay
+
+* The Assumption: "Once a deposit order tracking ID is updated to 'PAID' or 'COMPLETED' and the wallet balance increases, the event is finalized and cannot be reused."
+* The Hidden Flaw: The backend validates the payment hash securely but deletes the tracking ID key from its fast-cache engine (Redis) without permanently writing a hard blocking "COMPLETED" flag into the primary relational SQL database row.
+* How to Break It: Intercept a valid, signed deposit success webhook or callback payload from a legitimate small transaction. Send this exact same payload 30 times inside a single HTTP/2 TCP frame using a single-packet attack tool. If the fast-cache lookup fails to find an active block because it was wiped by the first thread, the parallel database threads will process the credit multiple times.
+
+## 2. Delayed Settlement Arbitrage
+
+* The Assumption: "A user cannot generate artificial credits because the system tracks transaction amounts down to the millisecond of user initialization."
+* The Hidden Flaw: To ensure user experience consistency, the application locks down an exchange rate or a specific internal promotional bonus window state when the deposit form loads, but the actual balance deduction and wallet credit happen hours later when the payment settles.
+* How to Break It: Initialize a deposit during extreme real-time global market or fiat currency volatility to lock a favorable rate or bonus structure in a "Pending" state. Intentionally delay completing the actual payment until the live market metrics shift massively in your favor. If the final settlement microservice processes the incoming bank callback by reading the old cached session state instead of the current spot rate, you gain inflated purchasing power.
+
+## 3. The Multi-Gateway Lock Splitting
+
+* The Assumption: "Our global database transactions enforce strict data integrity across all deposit forms, so a user can never credit a single payment ticket twice."
+* The Hidden Flaw: The platform integrates multiple local payment gateways (e.g., PIX, PhonePe, MoMo) that share the same internal transaction identifier pool but operate on isolated processing microservices.
+* How to Break It: Initiate a single deposit request to generate an official transaction code. Take that exact reference number and submit it simultaneously to two different regional processing endpoints using your proxy tool. If the internal state machine validates the payment signatures independently without locking the global master transaction table, both gateways can successfully credit the same order ID.
+
+## 4. Asynchronous Callback Timeout Spoofing
+
+* The Assumption: "Our deposit ledger only trusts automated, incoming server-to-server notifications from verified payment networks to adjust wallet balances."
+* The Hidden Flaw: If the external banking network experiences heavy latency, the 1win backend drops back to an alternative validation routine to verify "stuck" transactions for users.
+* How to Break It: Initiate a legitimate deposit but intentionally choke the network connection or inject malformed tracking parameters to force a timeout state on the payment provider's webhook routing path. While the state is stuck in an unverified loop, trigger automated client-side balance sync requests. If the fallback code assumes a long delay implies a successful external payment queue settlement, it may manually override and credit the wallet.
+
+------------------------------
+## 💵 Tier 2: Mathematical Precision & Data Model Limits## 5. Floating-Point Truncation Exploitation
+
+* The Assumption: "Our deposit accounting engines compute currency conversions and fractional micro-deposits uniformly, preventing the generation of free balance."
+* The Hidden Flaw: Internal tracking systems manage precision using high floating-point variables, but external local payment systems only accept two-decimal integers.
+* How to Break It: Execute thousands of automated micro-deposits in a low-value or hyper-inflationary regional currency using extreme fractional numbers (e.g., 0.0049 units). If the internal ledger rounds your credited amount up to the nearest valid local micro-unit (e.g., 0.01) while the external wallet handler rounds the actual physical deduction down to zero to clear dust, you build real balance from pure rounding math.
+
+## 6. Integer Underflow via Multi-Voucher Deductions
+
+* The Assumption: "Applying a deposit promotional voucher code simply adds a fixed percentage modifier to the incoming transaction amount parameter."
+* The Hidden Flaw: The promotional engine processes discount or bonus code logic separately from the core financial ledger arithmetic.
+* How to Break It: Inject specialized negative integer values or extremely high unsigned bounds markers into the bonusId or voucher input array keys during a deposit checkout. If the math engine processes the custom payload inside an unvetted logic block, it can trigger an integer underflow error, tricking the core database into rolling back the deposit check while still registering the highly inflated promotional bonus balance.
+
+## 7. Scientific Notation Parameter Injection
+
+* The Assumption: "Our input validation forms ensure that the deposit amount field only accepts real, positive numeric digits before handing it off to the ledger database."
+* The Hidden Flaw: The gateway checks that the input is a valid number format, but it permits standard scientific notation strings (like 1e5).
+* How to Break It: Change a small deposit parameter string from amount: 100 to amount: 100e3. The API gateway reads 100e3 as a legitimate numeric representation and allows it past the front door. If the database schema or the payment calculation engine interprets the notation format differently, it can scale the final credited wallet balance up exponentially while processing the charge at the baseline rate.
+
+## 8. Cumulative Volumetric Overflow on Staging Ledgers
+
+* The Assumption: "Our database fields use standard mathematical data models to track user lifetime deposits and enforce daily anti-laundering thresholds."
+* The Hidden Flaw: While single transaction values are strictly restricted, daily or lifetime accumulation columns might be vulnerable to numeric overflow boundaries.
+* How to Break It: If daily limits are capped at a specific value, execute a massive volume of rapid, high-speed micro-deposits designed to push the cumulative daily tracking integer past maximum storage thresholds (such as an unsigned 32-bit integer limit). If the tracking variable overflows and resets to a negative value or zero, the system's automated anti-fraud restriction blocks fail to engage.
+
+------------------------------
+## 🧬 Tier 3: Microservice Handoffs & Parameter Trust## 9. Nested Property Mass Assignment (Nested Object Blindness)
+
+* The Assumption: "The API gateway verifies your authentication token securely, ensuring a user can only interact with their own personal deposit account profile."
+* The Hidden Flaw: The gateway ensures you own the active session, but it forgets to recursively audit nested metadata blocks designed for the payment provider.
+* How to Break It: Intercept your deposit request in your proxy tool. Look past the top-level keys and locate the nested metadata configuration block:
+
+{
+  "session_id": "VALID_USER_A",
+  "deposit_details": {
+    "player_id": 99821,
+    "target_wallet_id": 11111
+  }
+}
+
+Modify the nested player_id or target_wallet_id to match a target victim's ID or an alternate wallet context, while keeping your account details in the session field. If the billing service uses the top-level session to assign the real money payment, but reads the nested metadata to route the balance credit, you can deposit funds into a separate profile or override other account limits.
+
+## 10. Type Juggling on Gateway Status Callbacks
+
+* The Assumption: "Our internal payment processing queue shifts transaction states safely between 'PENDING', 'PROCESSING', and 'SUCCESS' based on signed network notifications."
+* The Hidden Flaw: Microservices processing state flags using loose comparison components can be tricked by structural type alterations.
+* How to Break It: Intercept the deposit status update request. Modify the status parameter from a standard string format to a boolean value or an array chunk (e.g., changing "status": "PENDING" to "status": true). If the backend evaluation code uses loose checks, it may resolve the true condition as a match for the successful execution logic pathway, finalizing the balance modification.
+
+## 11. Unsigned Parameter Injection in Third-Party Callback Forms
+
+* The Assumption: "Every field transmitted within a payment provider's webhook payload is entirely covered by the provider's cryptographic signature."
+* The Hidden Flaw: The signature calculation array often only covers the critical fields like order_id and amount, while ignoring secondary fields like bonus_multiplier or currency_override.
+* How to Break It: Analyze a real deposit webhook signature string to deduce which fields are cryptographically bound. Inject un-hashed append parameters directly into the request payload (e.g., adding &currency=USD or &multiplier=2). If the verification algorithm validates the signature successfully based on the core array keys, but the backend ledger still reads the untrusted, un-hashed append variables, you inflate the resulting credit.
+
+## 12. Blind SQLi inside Secondary Settlement Ledgers
+
+* The Assumption: "Our user input forms use sanitization tools to fully neutralize database injection attacks on all standard web routes."
+* The Hidden Flaw: Input parameters are sanitized before hitting the primary web database, but they are stored raw inside historical log repositories or auditing ledgers.
+* How to Break It: Inject non-reflective SQL or NoSQL database injection sequences into fields that have no impact on the web view, such as the deposit bank name description or custom payment reference strings. When separate background analytics systems query these tables at a later time to run reconciliations, the raw string executes directly inside the internal storage framework.
+
+------------------------------
+## 🔄 Tier 4: Client-to-Server Verification Shortcuts## 13. Implicit Trust in Client-Side Redirect URLs
+
+* The Assumption: "When a user returns from a third-party banking redirect page, we read the outcome status exclusively via server-to-server tracking APIs."
+* The Hidden Flaw: Developers sometimes create client-side routing shortcuts to give the user instant visual confirmation on the dashboard.
+* How to Break It: Initiate a deposit that gets marked as "Pending Review." Intentionally construct a fake return URL path mimicking a verified outcome state: https://1win.com. Load this into your session. If the front-end browser logic executes a direct API call that triggers an instant wallet cache refresh based on the URL data flags, you force a temporary balance adjustment before the actual bank settlement completes.
+
+## 14. Signature Omission on Merchant Routing Profiles
+
+* The Assumption: "Our merchant profile configurations are static and fully locked down. No user can alter the internal identifiers used to coordinate banking routes."
+* The Hidden Flaw: To handle global regional flexibility, applications pass the specific payment provider merchant ID through client-side hidden variables.
+* How to Break It: Locate the parameters handling routing details in your proxy traffic history (e.g., provider_id=merchant_alpha). Substitute this string with an alternate provider code or your own personal sandbox merchant configuration tracking value. If the underlying endpoint skips verification because it assumes the front-end interface generated the routing block, it routes the deposit settlement stream directly into your external control node.
+
+## 15. The "Null" Signature Fallback Override
+
+* The Assumption: "Every incoming transactional call must contain a valid cryptographic signature hash string to prove its authenticity."
+* The Hidden Flaw: If the authorization parameter is completely missing, the verification library can crash or fall back to an uninitialized state.
+* How to Break It: Capture a deposit validation callback payload. Completely strip the signature parameter string or token key from the HTTP headers and JSON bodies. If the validation engine compares an empty user string against an empty internal default variable due to a coding oversight, it evaluates the comparison as a successful match.
+
+## 16. Missing Replay Protection on Idempotency Keys
+
+* The Assumption: "Our system uses unique idempotency tracking headers to prevent a user from accidentally submitting duplicate deposit operations."
+* The Hidden Flaw: Idempotency tables are frequently stored inside temporary memory structures that flush or expire rapidly after short durations.
+* How to Break It: Complete a legitimate deposit successfully. Capture the exact network request payload and header configuration. Wait for the exact moment the fast-cache data expires (or force a cache reset by shifting minor, non-validated tracking strings like the User-Agent), then replay the exact same transaction request body hours later to see if it bypasses secondary ledger blocks.
+
+------------------------------
+## 🎮 Tier 5: The Ecosystem & Anti-Fraud Boundaries## 17. Null Byte Truncation on Unique Reference IDs
+
+* The Assumption: "The system enforces a strict unique index boundary on transaction references (like UTR codes), making it impossible to input the same receipt twice."
+* The Hidden Flaw: The database system and the string concatenation layer in the code handle trailing spaces or null characters differently.
+* How to Break It: Submit a valid deposit receipt ID. Then, submit it a second time with a trailing null byte (%00) or white space appended to the parameter string (e.g., UTR12345%00). If the code treats it as a brand-new unique entry during validation but the underlying database column strips the trailing character during storage, it overrides the unique constraint block, crediting your account twice.
+
+## 18. Third-Party Casino Game Balance De-synchronization
+
+* The Assumption: "When a user launches an external game title, their wallet balance shifts securely into a locked state that cannot be touched until they close the game window."
+* The Hidden Flaw: The connection bridge between the 1win core financial database and the third-party game engine relies on network connection timeout triggers.
+* How to Break It: Deploy your entire balance into a live, high-stakes multiplayer casino game room. At the exact millisecond you place the wager, issue a manual connection abort command to terminate your session with the core API engine, while allowing the game window to stay open via a separate network buffer. If the core system reverts your balance due to a timeout error, you recover the initial funds while the game continues to process the wager.
+
+## 19. Regional IP-Allowlist Spoofing
+
+* The Assumption: "We restrict specific localized high-value deposit gateways to verified regions to prevent fraudulent cross-border traffic."
+* The Hidden Flaw: The application relies on incoming HTTP forwarding tracking headers to deduce your true geographical location.
+* How to Break It: Supply custom proxy tracking variables inside your outgoing request headers, such as X-Forwarded-For: 127.0.0.1, X-Real-IP: INTERNAL_IP, or matching an IP from a high-trust administrative region. If the internal validation framework reads these parameters instead of checking the raw socket connection origin, it skips geographic access controls.
+
+## 20. The Default Sandbox Provider Fallback
+
+* The Assumption: "Our production deposit environments communicate exclusively with live, active banking networks to process physical money transfers."
+* The Hidden Flaw: If a primary regional banking network goes offline or experiences severe latency, the application's error-handling scripts can fall back to alternative fallback configurations.
+* How to Break It: Intentionally flood a specific regional provider interface with malformed inputs to trigger an internal timeout state. While the provider connection is struggling, pass a custom status flag like mode=test or gateway=sandbox inside your deposit configuration packet. If the backend fails to strictly block non-production flags during failover sequences, it can route the request to a legacy testing node that approves the payout without moving real money.
+
+------------------------------
+## 🚀 Designing Your Investigation Strategy
+To execute this advanced methodology systematically on your workstation:
+
+   1. Stop running general automated fuzzers: They trigger generic firewalls and fail to understand these complex time-based or architecture-based logic flaws.
+   2. Map the data pipelines step-by-step: Use your proxy tool to isolate how the application passes metadata parameters down through nested objects.
+   3. Validate impact strictly: Remember that under the program rules you pulled, you must show settled, realized impact (a real change in your account balance or wallet state) to claim a successful bounty.
+
+To ensure your environment is fully primed to capture these flaws, let me know:
+
+* Would you like a custom Bash template to automate the detection of parameter asymmetries across regional mirror configurations?
+* Or do you want to build a Burp Suite macro tracking routine to preserve active authentication contexts during multi-threaded race condition tests?
+

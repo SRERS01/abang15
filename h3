@@ -1,0 +1,83 @@
+Here is your end-to-end command-line toolkit to automate the scanning process and pull raw JavaScript variables directly out of running WebSocket traffic.
+------------------------------
+## 🛠️ Part 1: The Ultimate Bash Automation Script
+This script chains domain mirror extraction, Retire.js execution, and jq filtering into a single automated pipeline. It automatically isolates libraries vulnerable to high-impact flaws like Prototype Pollution or RCE, saving you hours of manual grep sorting.
+Create a file named hunt_js.sh on your machine:
+
+nano hunt_js.sh
+
+Paste the following automated script:
+
+#!/bin/bash
+# Target Definitions
+TARGETS=("https://1w.run" "https://1w.cash" "https://1win.com")
+WORKSPACE="$HOME/hunting/1win_automation"
+USER_AGENT="Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1"
+
+echo "[*] Initializing Workspace: $WORKSPACE"
+mkdir -p "$WORKSPACE/assets"
+cd "$WORKSPACE"
+# 1. Scrape JS assets from all mirrors simultaneouslyfor URL in "${TARGETS[@]}"; do
+    echo "[+] Extracting JS layers from: $URL"
+    wget --spider --recursive --level=3 --no-check-certificate --quiet \
+         --accept js \
+         --user-agent="$USER_AGENT" \
+         "$URL" -P "$WORKSPACE/assets"done
+
+echo "[*] Updating Retire.js signature matrix..."
+retire --update
+
+echo "[*] Running deep CLI scan on compiled bundles..."# Scan the workspace, output structured JSON, filter for high/critical risks
+retire --path "$WORKSPACE/assets" --outputformat json --outputpath raw_results.json --severity high
+# 2. Extract actionable data using jqif [ -f raw_results.json ]; then
+    echo -e "\n[!] HIGH SEVERITY VULNERABILITIES DETECTED:"
+    echo "--------------------------------------------------"
+    jq '.data[] | {file: .file, library: .results[].component, version: .results[].version, vulnerability: .results[].vulnerabilities[].info}' raw_results.json 2>/dev/null
+    echo "--------------------------------------------------"else
+    echo "[-] No critical known signatures isolated by Retire.js."fi
+
+Save and run it:
+
+chmod +x hunt_js.sh
+./hunt_js.sh
+
+------------------------------
+## 🎮 Part 2: Extracting JavaScript Variables from Live WebSockets
+Standard web application crawlers are blind to WebSockets (wss://). Because casino engines communicate through persistent, bidirectional socket streams, vulnerabilities hide in the raw binary/JSON variables transmitted when betting.
+You can extract these streams directly via the command line using tcpdump and tshark (the terminal version of Wireshark) on your Latitude 3380.
+## Step 1: Capture the Raw Traffic
+While you are logged into your test account and playing a casino game, capture the raw network packets hitting your network interface.
+
+   1. Find your active network interface (e.g., wlan0 or eth0):
+   
+   ip link show
+   
+   2. Sniff the live HTTPS/WSS traffic stream and dump it to a capture file:
+   
+   sudo tcpdump -i wlan0 port 443 -w casino_traffic.pcap
+   
+   (Let it run for 1–2 minutes while placing low-stakes bets or navigating game rooms, then press Ctrl + C)
+
+## Step 2: Extract & Decode WebSocket Text Frames
+WebSockets masks data payloads. tshark can strip the TLS and masking layers to output the raw, hidden JavaScript arrays and backend variables passing back and forth.
+Run this analysis command on your saved file:
+
+tshark -r casino_traffic.pcap -Y "websocket.payload.text" -T fields -e websocket.payload.text > extracted_frames.txt
+
+## Step 3: Hunt for Logic & Variable Assumptions
+Open extracted_frames.txt. You will see the raw inner messages the application's engine reads. To find what scripts miss, look for specific string structures:
+
+* Look for Hidden Status Switches:
+
+grep -E "(status|win|win_amount|multiplier|bet)" extracted_frames.txt
+
+* Analyze Object Properties: Look for objects containing key parameters that you can replay or modify via your proxy (e.g., {"event":"bet","amount":10,"currency":"USD","game_id":8420}).
+
+If a third-party framework flagged by your Retire.js automation script is processing these socket frames insecurely (like processing raw strings directly via an old eval() or unvetted parsing library inside the runtime bundle), you have a direct path to trigger high-severity behavior.
+------------------------------
+## 🚀 Advancing Your Hunt
+Now that you have both the automated static analysis pipeline and the capability to pull runtime streaming data:
+
+* Do you need help mapping a specific entry point found by the bash script to an exploit payload?
+* Or would you like to build a live filtering rule to isolate specific numeric user identifiers (UIDs) out of the extracted WebSocket text files?
+

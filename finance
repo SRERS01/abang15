@@ -1,0 +1,23 @@
+💳 Deep Financial Logic & Gateways (The Maximum Payout Target)Everyone checks if changing amount=100 to amount=1 works on the direct client view. It never does on mature systems. The actual critical vulnerabilities reside where currency rates diverge, or where payment handlers misinterpret identical network states.                  [ Attacker Wallet ]
+                 (Balance: 1.00 USD)
+                          │
+            ┌─────────────┴─────────────┐
+            ▼                           ▼
+    [ Concurrent Thread 1 ]     [ Concurrent Thread 2 ]
+    (Withdraw 1.00 USD)         (Withdraw 1.00 USD)
+            │                           │
+            └─────────────┬─────────────┘
+                          ▼
+            [ Shared Validation Check ]
+         (Both read Balance = 1.00 USD)
+                          │
+            ┌─────────────┴─────────────┐
+            ▼                           ▼
+    [ Deduct Wallet ]           [ Deduct Wallet ]
+   (Balance: -1.00 USD)        (Balance: -1.00 USD)
+Race Conditions via Network Frame Lock-SteppingAutomated scripts that spam requests sequentially fail because web application firewalls block the traffic. To trigger true concurrency, requests must arrive at the server backend within the same network packet frame.Where It Is Hidden: Bonus code activation endpoints, peer-to-peer balance transfers, or multi-currency inner wallet conversions.The Technique: Utilize HTTP/2 single-packet attacks via Burp Suite’s Turbo Intruder. Queue 50 identical requests that deduct or add balances simultaneously, compressing them so that the webserver routes them to separate processing threads before computing account values.Payload Template (Turbo Intruder):pythondef queueRequests(target, wordlist):
+    engine = RequestEngine(endpoint=target.endpoint, concurrentConnections=1, requestsPerConnection=100, pipeline=False)
+    for i in range(30):
+        engine.queue(target.req, gate='raceGate')
+    engine.openGate('raceGate')
+Use code with caution.Cryptographic Hash Truncation and Type JugglingMany payment gateway callbacks verify the authenticity of a transaction using a shared secret signature hash string (e.g., md5(order_id + amount + secret)).Where It Is Hidden: The backend webhook notification processing scripts (/payment/callback/provider_name).The Technique: If the backend relies on loose type comparisons (like == instead of === in PHP or typecasting rules in Node.js), try modifying parameter formats. Change numerical values into strings, arrays, or scientific notations to bypass validation rules.Payloads:Change amount=100 to amount=1e2 or amount=100.000 to see if the validation algorithm generates a different hash signature than the database logic logs.Inject null bytes amount=100%00 to truncate string concatenation logic during internal signature processing.Gateway ID Replay & UTR (Unique Transaction Reference) ReuseWhen you deposit using local payment systems, you get a tracking code or standard transaction receipt ID.Where It Is Hidden: The manual deposit notification slip submission form.The Technique: Obtain a genuine UTR code from a minor, legitimate payment. Submit it simultaneously across two different accounts using a multi-threaded request pool. Alternatively, pad the reference ID with white space characters or trailing zeroes to test if the transaction logging database handles them as separate entries while the payment processing engine reads them as identical values.Payloads:UTR123456789UTR123456789  (Trailing space)UTR123456789\x00

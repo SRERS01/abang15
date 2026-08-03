@@ -1,0 +1,101 @@
+## 📊 Part 1: High-Impact Vulnerability Report Template
+When submitting a finding to a program with strict rules like 1win, the structure of your report determines if you get a premium payout or an immediate "Informative" rejection. Since the policy heavily emphasizes settled realized impact, your documentation must clearly highlight the before-and-after financial balance state and the backend validation failure.
+Use this structured markdown template to submit your findings:
+------------------------------
+## Title: Unauthorized Balance Crediting via Client-Side State Injection in WebSocket Stream## Vulnerability Class
+Critical - Unauthorized fund movement or balance crediting ($1,500–$2,500)
+## Target Scope Impacted
+
+* Domain: 1w.run / 1win.com
+* Endpoint: wss://://1win.com
+* Impacted Third-Party Module/Integration: Casino Game Synchronization Engine
+
+## Summary
+An architectural business logic vulnerability exists within the high-speed synchronization handshake of the WebSocket communication system. The backend application trustfully parses client-defined JSON object frames regarding wallet states during sudden connection terminations. By manipulating dynamic variables inside the socket stream framework, an authorized user can artificially inflate their settled wallet balance without initiating a matching payment transaction.
+## Proof of Concept Steps
+
+   1. Establish a valid user session on 1win.com using a test wallet initialized with a real baseline balance (e.g., $10.00). Record the transaction log state.
+   2. Launch a target casino gaming title to establish a persistent socket frame routing tunnel to the infrastructure gateway.
+   3. Intercept the outgoing stream frame traffic using a terminal sniffing layout (tshark/tcpdump). Identify the state synchronization packet structure:
+   {"action":"sync","set_balance":10.00,"user_id":YOUR_UID}
+   4. Execute a structured runtime modification loop, swapping the integer value from 10.00 to 50.00.
+   5. Induce a sudden network frame disconnect (TCP FIN/RST packet) immediately after transmission to trigger the backend session timeout reconciliation procedure.
+   6. Navigate back to the primary billing account dashboard. Notice that the new balance has successfully settled to the modified value across the entire application ecosystem.
+
+## Evidence Records
+
+* Baseline Starting Balance Snapshot: [Insert Image Link showing original account balance and transaction ID]
+* Modified Payload Log: {"action":"sync","set_balance":50.00,"user_id":YOUR_UID}
+* Settled Post-Exploit Balance Snapshot: [Insert Image Link showing the new updated wallet balance]
+* Provider Ledger Context: [Attach raw HTTP/WSS transaction callback history text]
+
+## Remediation Strategy
+Enforce strict zero-trust parameters on all incoming client-side stream requests. Real-time balance calculations, updates, and wallet settlements must never rely on integer frames transmitted or defined by the client application layer. The backend system must use transactional cryptographic signatures to sync balances between the primary financial ledger database and isolated third-party gameplay sessions.
+------------------------------
+## 📡 Part 2: Real-Time Automated WebSocket Stream Monitor
+To watch variables shift dynamically as you execute tests, click through different game lobbies, or switch currency settings, you can deploy a live-tailing script interface. This lightweight Python automation script taps into your captured terminal network logs and instantly alerts you whenever critical wallet or user identifiers change in the stream.
+## The Live Monitor Code (stream_monitor.py)
+Save this file onto your computer:
+
+nano stream_monitor.py
+
+Paste the following script:
+
+import sysimport reimport jsonimport time
+# Define the local log target created by your tshark extraction commandLOG_FILE = "extracted_frames.txt"
+# Regex rules targeting high-value financial parametersBALANCE_REGEX = re.compile(r'"(balance|amount|win_amount|payout)"\s*:\s*([0-9.]+)')USER_ID_REGEX = re.compile(r'"(uid|user_id|player_id)"\s*:\s*"([^"]+)"')
+
+print("[*] Launching Live WebSocket Stream Monitor...")
+print("[*] Tracking modifications across balance variables and target IDs. Press Ctrl+C to terminate.")
+print("-" * 75)
+def monitor_stream():
+    try:
+        with open(LOG_FILE, "r", errors="ignore") as f:
+            # Move read position to the end of the current file data stream
+            f.seek(0, 2)
+            
+            while True:
+                line = f.readline()
+                if not line:
+                    time.sleep(0.1)  # Sleep briefly to wait for incoming frame data chunks
+                    continue
+                
+                # Check line for target matches
+                balance_match = BALANCE_REGEX.search(line)
+                uid_match = USER_ID_REGEX.search(line)
+                
+                if balance_match or uid_match:
+                    print(f"\n[ALERT] Active Transaction Stream Transition Detected:")
+                    print(f" -> Raw Payload: {line.strip()[:120]}...") # Print a short sample of the raw frame
+                    
+                    if uid_match:
+                        print(f" -> Isolated Context [Target ID]: {uid_match.group(2)}")
+                    if balance_match:
+                        print(f" -> Isolated Context [Financial State]: {balance_match.group(2)}")
+                    print("-" * 40)
+                    
+    except KeyboardInterrupt:
+        print("\n[-] Stream monitor session ended cleanly.")
+    except FileNotFoundError:
+        print(f"[-] Operational Error: Target file '{LOG_FILE}' not found. Verify your capture pipeline.")
+if __name__ == "__main__":
+    monitor_stream()
+
+## How to Execute It Live:
+
+   1. Start your tshark extraction stream script to continuously output web socket data directly into extracted_frames.txt:
+   
+   tshark -l -i wlan0 -Y "websocket.payload.text" -T fields -e websocket.payload.text >> extracted_frames.txt &
+   
+   2. In a second terminal window, run the monitor tool:
+   
+   python3 stream_monitor.py
+   
+   
+Every time a transaction completes, a game registers a state change, or a balance update triggers, your screen will display the clean isolated values. Look for deviations where variables change unexpectedly or keys leak across different game environments.
+## 🚀 Proposing Next Operational Steps
+Now that you have the complete operational toolset configured on your Latitude 3380 terminal:
+
+* Do you need help debugging any specific error output from your WebSocket capture pipeline?
+* Or would you like to review how to structure a Proof of Concept environment safely using sandbox account registration models to guarantee compliance with the bug bounty program's rules?
+

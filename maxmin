@@ -1,0 +1,81 @@
+When a developer sets a limit like "Withdrawals must be between 50 and 5000," they write validation rules to guard that boundary.
+Automated tools and 99% of researchers only test the obvious numbers: they try 49.99 or 5001. The backend immediately blocks them with a standard 400 Bad Request or an on-screen validation error, so they assume the limit is perfectly secure and move on.
+To find what they miss, you must look at how the backend processes, parses, and converts those numbers across different system tiers. Here is exactly how to test what 99% cannot.
+------------------------------
+## 🛠️ Step 1: Test Parameter Type Disruption
+Developers assume the client will always send a standard floating-point number or integer (e.g., 100). If they fail to strictly enforce the data type before passing it to the database, you can bypass the range validation entirely.
+## 1. The Array Multiplication Bypass
+Instead of sending a single number, send the amount inside a JSON array.
+
+* The Payload: Change "amount": 100 to "amount": [50, 50, 50] or "amount": [10000].
+* The Hidden Logic: The gateway checks the first element of the array (50), sees that it is within the allowed bounds, and passes the validation step. Later, when the internal billing service reads the object, it might loop through the array and process all values, or parse the nested number without bounds checking, letting you withdraw an unauthorized total sum.
+
+## 2. Scientific Notation Overrides
+Test if the math library parses scientific notation patterns differently than the string validation layer.
+
+* The Payload: Change "amount": 5001 to "amount": 0.5e4 or "amount": 5e3.
+* The Hidden Logic: A string regex scanner might fail to recognize 0.5e4 as a number greater than 5000, or read it as being under the maximum limit. However, when the SQL database or ORM layer typecasts it into an integer, it evaluates to 5000 or parses the mathematical value directly, bypassing the strict numeric filters.
+
+------------------------------
+## 💵 Step 2: Exploit Multi-Currency Exchange Rate Conversions
+1win supports dozens of currencies. While the user interface might enforce the 50–5000 limit in your display currency (e.g., USD), the core database might calculate limits using an entirely separate base currency (e.g., EUR or BRL). The vulnerability hides in the math gaps between the two.
+## 1. The Exchange Rate Underflow
+Find an endpoint that handles currency conversions during a withdrawal request.
+
+* The Execution: Select a low-value, hyper-inflationary currency. Calculate an exact amount that equals less than 50 units in the display currency but rounds up to a higher integer in the backend's native currency ledger.
+* The Hidden Logic: If the front-end validation layer converts the currency and checks the lower bound incorrectly, it may let the request pass. The backend completes the transaction because its internal ledger reads the processed value as meeting its local minimum requirements, effectively allowing you to bypass the stated platform limits.
+
+------------------------------
+## ⏱️ Tier 3: Exploit Parallel Accumulation (The Volume Lock)
+Developers often set a daily maximum limit (e.g., "You cannot withdraw more than 5000 total per day"). To enforce this, they write code that checks your total daily volume before approving a new withdrawal. [1] 
+## 1. The Single-Packet Attack on Volume Caps
+If you have a balance of $10,000 and the maximum single or daily withdrawal limit is $5,000, you can bypass this threshold entirely using network concurrency.
+
+* The Execution: Open Burp Suite's Turbo Intruder. Queue 5 or 10 identical withdrawal requests for $2,000 each. Bundle these requests into a single HTTP/2 TCP frame so they arrive at the server simultaneously.
+* The Hidden Logic:
+1. Request 1, 2, and 3 all hit the backend threads at the exact same microsecond.
+   2. All three parallel threads look at the database table tracking your daily volume: it reads Current Daily Volume = $0.
+   3. All three threads see that $2,000 is less than the $5,000 maximum cap, so they all return True (Approved).
+   4. The server processes all three payouts simultaneously, executing a total withdrawal of $6,000 and completely bypassing the daily safety maximum before the volume counter can update and lock you out.
+
+------------------------------
+## 🧬 Tier 4: Client-Side Object Modification (Nested Property Injection)
+When you type an amount into the withdrawal field, the front-end application wraps that number into a data object. Scanners only fuzz the obvious amount key. You look for the hidden parameters developers pass silently alongside it.
+## 1. Overriding the Limit Properties
+Intercept the withdrawal request and look closely at the full JSON payload structure. Often, developers pass metadata flags that define the limits dynamically to save database queries.
+
+* The Payload: Look for parameters like this:
+
+{
+  "amount": 5500,
+  "currency": "USD"
+}
+
+Manually inject properties designed to overwrite the backend model validation logic:
+
+{
+  "amount": 5500,
+  "currency": "USD",
+  "bypass_limits": true,
+  "min_limit": 0,
+  "max_limit": 100000,
+  "ignore_constraints": 1
+}
+
+* The Hidden Logic: If the backend database code uses an open object-mapping framework (Mass Assignment) to initialize the validation class, passing these custom fields can overwrite the internal limit boundaries for your session, letting you process an amount that would normally be blocked.
+
+------------------------------
+## 🚀 Summary Matrix for Your Next Step
+
+| Target Test | Payload Structure | Hidden Assumption to Break |
+|---|---|---|
+| Type Disruption | "amount": [50, 5001] | Assumes input is always a simple integer. |
+| Notation Shift | "amount": "0.5e4" | Assumes regex strings catch numerical boundaries. |
+| Concurrency Blast | HTTP/2 Single Packet (Multiple Requests) | Assumes volume checks happen sequentially across time. |
+| Property Injection | "max_limit": 99999 | Assumes the client will never guess internal model keys. |
+
+To keep setting up your workplace safely on your machine:
+
+* Would you like a custom Python Turbo Intruder script to execute the HTTP/2 single-packet attack against this volume cap?
+* Or do you want to analyze a raw JSON withdrawal request log from your proxy to find hidden metadata keys?
+

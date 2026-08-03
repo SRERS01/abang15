@@ -1,0 +1,39 @@
+Yes, exactly! In the bug bounty and security world, breaking a developer's architectural assumption is the very definition of a business logic vulnerability (or logic bug).
+Unlike technical bugs (like an old software version flagged by Retire.js), logic bugs cannot be detected by automated scanners because the code itself runs perfectly without crashing. The application is doing exactly what the developer told it to do—the flaw is that what the developer told it to do was based on a broken assumption about reality. [1, 2] 
+------------------------------
+## Why Logic Bugs Are the Ultimate Target
+When you master the art of finding logic bugs, you become a formidable researcher for three reasons:
+
+   1. Scanners Are Completely Blind to Them: A scanner understands syntax, but it does not understand the concept of money, vouchers, or game rules. It sees a 200 OK response and moves on, completely missing the fact that you just bypassed a transaction limit. [3, 4, 5] 
+   2. They Yield the Highest Payouts: If you look at the 1win scope document you pulled, standard web bugs like Cross-Site Scripting (XSS) only pay $150. However, Financial Business-Logic Bypasses and Unauthorized Fund Movements pay up to $2,500 because they directly impact the company's capital.
+   3. They Do Not Depend on Exploits: You do not need complex memory corruption exploits or public CVE codes. You win simply by manipulating the workflow parameters so that the application defeats itself. [6, 7] 
+
+------------------------------
+## How to Map Logic Bugs to Your Hunting Workflow
+To systematically find these logic flaws on the 1win platform, categorize your tests based on how the developer's logic breaks:
+## 1. Flaws in Business Constraints (The Rule Bypasses)
+The developer writes a rule but forgets to enforce it across every parallel path.
+
+* The Assumption: "A user cannot withdraw money if they have an active bonus wager requirement lock."
+* The Logic Break: You find an alternative, legacy API endpoint (like an old mobile API route /api/v2/mobile/withdraw) where the developers forgot to include the database check for active bonus locks. [8] 
+
+## 2. Flaws in Transaction Sequences (The Workflow Skips)
+The developer assumes a user will follow steps 1, 2, and 3 in a perfect, straight line.
+
+* The Assumption: "A user can only get a deposit bonus if they physically complete a real fiat currency transaction."
+* The Logic Break: You open multiple tabs to manipulate the state machine. You initiate the deposit to get the system into a "Pending Bonus" state, and then force an internal balance sync or session refresh that tricks the backend into executing the credit step before the bank callback ever arrives. [9] 
+
+## 3. Flaws in Multi-Service Trust (The Edge Asymmetries) [10] 
+The developer trusts that two different programming systems will interpret data the exact same way.
+
+* The Assumption: "The third-party casino slot game provider and our core financial ledger will always perfectly agree on the user's wallet balance."
+* The Logic Break: You use connection latency or sudden frame aborts during a high-stakes bet. By interrupting the network connection at the exact millisecond a wager commits, you cause the two systems to fall into a desynchronized state, where one system refunds your money due to a timeout while the other processes the win.
+
+------------------------------
+## 🚀 Your Next Step as a Logic Hunter
+You have completely shifted your mindset from a tool-runner to an architectural analyst. You now see the target for what it truly is: a web of human assumptions. [11] 
+To start hunting down these business logic bugs on your workstation:
+
+* Would you like to analyze the exact step-by-step logic of how a specific features workflow (like redeeming a voucher code or updating a payment profile) handles data across multiple tabs?
+* Or would you like to review how to structure a Proof of Concept (PoC) document that clearly demonstrates a logic bug to the triage team so it doesn't get dismissed as an "Informative" report?
+

@@ -1,0 +1,35 @@
+The real definition of a developer assumption is the invisible, unwritten trust a software engineer places in a specific component, state, or data pipeline when writing code.
+It is the psychological blind spot where a developer stops writing security checks because they believe a certain condition will always be true in reality.
+In pure architectural terms, a developer assumption is an implicit invariant—a rule that the developer believes cannot be broken, so they do not write code to defend against its failure. [1] 
+------------------------------
+## The Anatomy of an Assumption
+To understand it deeply, you must realize that developers do not write vulnerable code on purpose. They write code based on a mental model of how their application should work. A vulnerability is born the exact millisecond their mental model disagrees with how the system actually works in the physical world. [2, 3] 
+Every developer assumption is built on three core pillars: [4] 
+## 1. Trusting the Source (Origin Assumption)
+
+* The Thought: "This data is coming from our front-end UI, our secure mobile app, or our trusted internal API gateway. Therefore, it has already been cleaned, checked, and verified."
+* The Reality: Firewalls, proxies, and gateways can be bypassed, paths can be polluted, and headers can be forged. If the inner microservice doesn't check the data itself, the perimeter trust collapses.
+
+## 2. Trusting the Sequence (Linear Assumption)
+
+* The Thought: "Step A must finish before Step B can start. A user can only click 'Confirm' after our system checks that their balance is sufficient." [5] 
+* The Reality: Computers do not think linearly; they process thousands of threads across multi-layered caches simultaneously. Network frames can be compressed to arrive at the exact same microsecond, forcing the code to execute Step B multiple times before Step A can finish updating the database. [6] 
+
+## 3. Trusting the Structure (Format Assumption)
+
+* The Thought: "When we ask for an amount, the system will receive a clean number between 50 and 5000. If it receives anything else, the data type verification layer will naturally crash or block it."
+* The Reality: Complex programming languages use loose type comparison logic. Passing an array, a boolean true, a scientific notation string, or a null primitive can cause the comparison equation to resolve unexpectedly without triggering an input error.
+
+------------------------------
+## Why Scanners are Blind to Assumptions
+Automated scanners and standard checklists look for patterns of bad code (like a missing security header or a reflected string). They look at what is there. [7, 8] 
+An assumption is defined by what is missing. It is the absence of an explicit access-control check, the lack of a database lock query, or the missing whitelist on a JSON object mapper. Because scanners have no context of how the business logic is supposed to behave over time, they cannot detect a missing architectural constraint. [9, 10] 
+## How to Apply This Definition to Your Hunt
+To become a world-class researcher, you must look at an application not as a collection of entry boxes, but as a chain of human choices. Every time you see a feature look at it and ask:
+
+* What must the developer believe to let this request process this way?
+* What external system are they trusting blindly here?
+* What happens if I introduce a contradiction to their mental model?
+
+When you find where their imagination stopped, you find the vulnerability.
+Would you like to analyze a specific feature workflow (like a live multi-player match settlement or a banking deposit handshake) to break down how a developer's mental assumptions are mapped out line-by-line?

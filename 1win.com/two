@@ -1,0 +1,42 @@
+Since you already have your tools set up, the fastest way to start hunting on 1win is to map their specific attack surface based on the rules you just pulled. 1win is a gambling and betting platform, meaning your highest payouts will come from financial logic and concurrency issues, not just standard web bugs.
+Here is your immediate operational blueprint to start hunting.
+## 1. Target Infrastructure Mapping (Recon)
+Do not waste time on external payment gateways, as the policy explicitly marks them out of scope. Focus strictly on how 1win handles them.
+
+* Subdomain Enumeration: Run your subfinder/assetfinder tools on 1win.com, 1w.run, and 1w.cash. Look for staging, dev, or api subdomains.
+* Geographic Bypass: The scope list shows specific allowed countries (e.g., Brazil, India, Cameroon). Use a VPN or residential proxies matching these regions. The application behavior, available payment gateways, and API endpoints will change drastically based on your IP location.
+
+## 2. High-Value Target: The Payment Flow
+The policy offers up to $2,500 for payment bypasses. This is where you should focus your proxy tool (Burp Suite or OWASP ZAP).
+
+* Callback and Redirect Tampering: Initiate a deposit. Analyze the step where the external provider redirects you back to 1win.com. Look for parameters like amount, status=success, transactionId, or signature. Try tampering with these to see if the 1win backend credits your account without verifying the cryptographic signature.
+* Parameter Pollution: When submitting a deposit request, duplicate parameters (e.g., amount=10&amount=1000) or mix types (e.g., sending amount as a string or array) to see if the validation layer and the database layer read different values.
+
+## 3. Test for Race Conditions (Double-Credit)
+The policy explicitly mentions "duplicate payout via race/replay."
+
+* Simultaneous Requests: Use Burp Suite's Turbo Intruder or the built-in Repeater (with single-packet attack features) to send multiple identical requests at the exact same millisecond.
+* Where to test:
+* Voucher/Bonus activation: Try to redeem one promo code multiple times simultaneously.
+   * Withdrawal requests: Try to trigger two withdrawals at once when you only have enough balance for one.
+   * Game bets: Place a bet right at the millisecond a live sports event state changes.
+
+## 4. IDOR and Business Logic
+1win pays up to $1,000 for critical IDORs, but $0 for generic enumeration.
+
+* Account Settings: Go to your personal account profile. Change your details and intercept the request. Look for numerical user IDs (e.g., user_id=12345). Replace it with another ID to see if you can modify or view another user's private data.
+* Currency Conversion: Deposit in a low-value currency, change your account currency preference if allowed, or initiate a transfer/gameplay step that converts funds. Look for rounding errors or hardcoded exchange rates that allow you to generate micro-profits.
+
+## Crucial Bug Bounty Compliance Note
+Based on the text you provided, 1win has an exceptionally strict burden of proof:
+
+* An HTTP 200 OK or an echoed value in a response is not a bug.
+* You must prove settled impact. Your wallet balance must actually change, or a transaction must completely settle on the backend.
+* Use only your own accounts and your own real funds for testing financial flows.
+
+If you want to start with a specific focus, let me know:
+
+* Which proxy tool (like Burp Suite) you prefer to use?
+* Do you want a script template for testing race conditions?
+* Are you focusing on the web application or their mobile/API endpoints?
+
