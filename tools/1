@@ -1,0 +1,43 @@
+Here is the optimal operational pipeline for your tools, organized logically from the broadest discovery phase down to highly specific exploit tools.
+Running them in this sequence prevents wasted time, as each phase feeds precise targets directly into the next tool.
+
+[ PHASE 1: RECON ]   ➔   [ PHASE 2: ENDPOINT ]   ➔   [ PHASE 3: CONTENT ]   ➔   [ PHASE 4: VULN SCAN ]   ➔   [ PHASE 5: EXPLOIT ]
+  gau, katana               linkfinder,                 ffuf, kiterunner            retire.js, xsstrike         jwt_tool, tplmap,
+                            secretfinder                                                                        commix, shellpop
+
+------------------------------
+## Phase 1: Passive & Active URL Gathering (Broad Discovery)
+Your goal here is to collect every known or crawlable asset surface before you start scanning.
+
+* 1. gau (Passive): Run this first. It hits third-party archives to grab thousands of historical URLs instantly without sending a single packet to 1win's servers. [1] 
+* 2. katana (Active): Run this second. Feed it the seeds from gau and your main domains. It will actively crawl, click buttons, fill forms, and find links hidden deep inside modern JavaScript applications. [2] 
+
+## Phase 2: JavaScript Analysis (Static Code Mining)
+Take the .js file URLs found by gau and katana and analyze them for hidden data.
+
+* 3. linkfinder: Feed it your gathered JS URLs to extract undocumented backend endpoints and API routes that aren't visible on the live site.
+* 4. secretfinder: Run this alongside LinkFinder to scan those same JS files for hardcoded API keys, JWT tokens, AWS credentials, or internal staging passwords. [3] 
+
+## Phase 3: Directory & API Fuzzing (Active Enumeration)
+Now that you have mapped the known layout, find what is hidden or restricted. [4] 
+
+* 5. ffuf: Use this to fuzz for standard web directories, hidden configuration files (like .env), and parameter names on your newly found web endpoints. [5] 
+* 6. kiterunner: Specifically designed for APIs. While ffuf handles regular web paths, use kiterunner on your api.1win... subdomains to brute-force REST, GraphQL, or Swagger endpoints using specialized API wordlists. [6] 
+
+## Phase 4: Targeted Vulnerability Scanning (Flaw Identification)
+At this point, you have an exact list of parameters, pages, and code scripts. Now you look for specific bugs.
+
+* 7. retire.js: Scan your collected JavaScript files to see if 1win is using outdated jQuery, Bootstrap, or Node libraries with known public CVEs.
+* 8. xsstrike: Feed it any URLs or input fields you found in Phase 1 & 3 that accept user input to analyze reflections and bypass XSS filters contextually.
+
+## Phase 5: Heavy Exploitation & Post-Exploitation (The Payoff)
+Only use these tools when you have definitively identified a matching vulnerable vector or parameter (e.g., a JWT token or an injection point).
+
+* 9. jwt_tool: Use this the second you intercept a JSON Web Token in your proxy (Burp Suite) or extract one via secretfinder. Test for weak signatures, algorithm confusion (alg: none), or session hijacking. [7, 8] 
+* 10. tplmap: If an endpoint reflects input and acts strangely, test it with tplmap to check for Server-Side Template Injection (SSTI).
+* 11. commix: If you suspect a parameter is passing data directly to a backend Linux terminal shell, feed it to commix to automate Command Injection payloads.
+* 12. shellpop: Once commix or tplmap confirms execution, use shellpop to instantly generate highly reliable, obfuscated reverse shell commands to hook back to your machine.
+
+(Note: ssrf_proxy is a utility tunnel rather than a sequential step. You will configure and run it in the background if you manage to find an SSRF vulnerability and need to route your other tools through 1win's local network infrastructure).
+------------------------------
+How would you like to proceed? I can provide a bash script wrapper to automatically feed gau results directly into katana and linkfinder, or we can drill down into the exact wordlists you should load into kiterunner for API hunting.
