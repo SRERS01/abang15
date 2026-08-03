@@ -1,0 +1,67 @@
+user@user-Latitude-3380:~/Bug-Update$ ls
+bug.sh  install.sh  LICENSE  README.md  setup_bug.py
+user@user-Latitude-3380:~/Bug-Update$ bug --install
+
+  ╔══════════════════════════════════════════════════════╗
+  ║  ⚡ [13:12:56] INSTALLING ALL REQUIRED TOOLS
+  ╚══════════════════════════════════════════════════════╝
+
+[*] [13:12:56] Updating apt...
+[sudo] password for user: 
+[✔] [13:13:19] python3 ✓
+[*] [13:13:19] Installing python3-pip...
+[✔] [13:13:20] python3-pip installed
+[✔] [13:13:20] curl ✓
+[✔] [13:13:20] wget ✓
+[✔] [13:13:21] git ✓
+[✔] [13:13:21] jq ✓
+[✔] [13:13:21] nmap ✓
+[✔] [13:13:21] sqlmap ✓
+[✔] [13:13:21] openssl ✓
+[✔] [13:13:21] subfinder ✓
+[✔] [13:13:21] httpx ✓
+[✔] [13:13:21] nuclei ✓
+[✔] [13:13:21] katana ✓
+[✔] [13:13:21] dnsx ✓
+[✔] [13:13:21] alterx ✓
+[✔] [13:13:21] naabu ✓
+[✔] [13:13:21] waybackurls ✓
+[✔] [13:13:21] gf ✓
+[✔] [13:13:21] anew ✓
+[✔] [13:13:21] qsreplace ✓
+[✔] [13:13:21] gau ✓
+[*] [13:13:21] Installing v2...
+[✔] [13:14:00] v2 installed
+[✔] [13:14:00] hakrawler ✓
+[*] [13:14:00] Installing v2...
+[✔] [13:14:04] v2 installed
+[✔] [13:14:04] getJS ✓
+[*] [13:14:04] Installing ......
+[!] [13:26:06] ... failed
+[*] [13:26:06] Installing assetfinder...
+[✔] [13:26:15] assetfinder installed
+[✔] [13:26:15] gowitness ✓
+[✔] [13:26:33] waymore installed
+[✔] [13:26:46] uro installed
+[✔] [13:26:55] arjun installed
+[✔] [13:26:57] dirsearch ✓
+[✔] [13:27:06] wafw00f installed
+[+] Installing feroxbuster to /usr/local/bin!
+[=] Found 64-bit Linux, downloading from https://github.com/epi052/feroxbuster/releases/latest/download/x86_64-linux-feroxbuster.zip
+[=] Found Noto Emoji Font, skipping install
+[+] Installed feroxbuster
+  [-] path: /usr/local/bin/feroxbuster
+  [-] version: 
+[✔] [13:27:23] feroxbuster installed
+[✔] [13:27:41] git-dumper installed
+[✔] [13:27:53] SecretFinder installed
+[✔] [13:28:07] LinkFinder installed
+[✔] [13:28:19] jwt_tool installed
+[✔] [13:28:27] GF patterns installed
+[*] [13:28:27] Installing SecLists...
+[sudo] password for user: 
+[✔] [13:28:45] SecLists installed
+[✔] [13:28:45] All tools ready! Run: bug -d <domain>
+user@user-Latitude-3380:~/Bug-Update$ 
+
+
